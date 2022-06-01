@@ -7,16 +7,17 @@ const http = require('http')
 const server = http.createServer(app)
 const {Server} = require('socket.io')
 const io = new Server(server)
+const {version, validate} = require('uuid')
 
 const ACTIONS = require('./src/socket/actions')
 
 require('dotenv').config()
 
-const PORT = process.env.PORT || 3003
+const PORT = 3005
 
 function getAllRooms(){
     const {rooms} = io.sockets.adapter
-    return Object.keys(rooms)
+    return Array.from(rooms.keys()).filter(roomId=> version(roomId) && validate(roomId) === 4)
 }
 
 function shareRoomsInfo(){
@@ -71,6 +72,20 @@ io.on('connection', socket => {
     }
     socket.on(ACTIONS.LEAVE, leaveRoom)
     socket.on('disconnecting', leaveRoom)
+
+    socket.on(ACTIONS.RELAY_SDP, ({peerId, sessioDescription })=>{
+        io.to(peerId).emit(ACTIONS.SESSION_DESCRIPTION, {
+            peerId: socket.id,
+            sessioDescription
+        })
+    })
+    socket.on(ACTIONS.RELAY_ICE,  ({peerId, iceCandidate})=>{
+        io.to( peerId ).emit(ACTIONS.RELAY_ICE,{
+            peerId: socket.id,
+            iceCandidate
+        })
+    })
+
 })
 
 server.listen(PORT, ()=>console.log(`Server started on PORT: ${PORT}`))

@@ -7,6 +7,6 @@ const options = {
     transports: ['websocket']
 }
 
-const socket = io('http://localhost:3003', options)
+const socket = io('http://localhost:3003/', options)
 
 export default socket
